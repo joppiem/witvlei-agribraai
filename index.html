@@ -276,8 +276,9 @@ let claims={}, slots={}, db=null, online=false;
 let huidigeDiv=null, modalLand=null, gekoseSlot=null;
 const key=s=>s.replace(/[.#$/\[\]]/g,'_');
 const slotKey=(bs,tyd)=>bs+"__"+tyd.replace(/:/g,'').replace('-','_');
-const spanKey=s=>s.trim().toLowerCase().replace(/[.#$/\[\]]/g,'_').replace(/\s+/g,' ');
-function spanGebruik(naam){ var n=spanKey(naam); return Object.values(claims).some(function(c){ return spanKey(c.span)===n; }); }
+const norm=s=>s.trim().toLowerCase().replace(/\s+/g,' ');
+const spanKey=(divcss,s)=>divcss+'__'+norm(s).replace(/[.#$/\[\]]/g,'_');
+function spanGebruik(naam){ if(!huidigeDiv) return false; var d=DIV[huidigeDiv].css; var n=norm(naam); return Object.values(claims).some(function(c){ return c.css===d && norm(c.span)===n; }); }
 
 function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>toastEl.classList.remove('show'),3000);}
 
@@ -321,7 +322,7 @@ function klik(naam){
   if(c){ toast('"'+naam+'" is reeds bespreek deur '+c.span+' ('+c.divisie+').'); return; }
   if(!huidigeDiv){ toast('Kies eers jou afdeling (Boere of Sosiaal) bo.'); return; }
   if(!spanI.value.trim()){ toast('Vul asseblief jou spannaam in bo.'); spanI.focus(); return; }
-  if(spanGebruik(spanI.value)){ toast('Spannaam "'+spanI.value.trim()+'" is reeds gebruik. Kies \u2019n unieke naam.'); spanI.focus(); return; }
+  if(spanGebruik(spanI.value)){ toast('Spannaam "'+spanI.value.trim()+'" is reeds in hierdie afdeling gebruik. Kies \u2019n unieke naam.'); spanI.focus(); return; }
   openModal(naam);
 }
 
@@ -365,11 +366,11 @@ mConfirm.onclick=()=>{
 
 function registreer(rec, sk){
   mConfirm.disabled=true;
-  var spk=spanKey(rec.span);
+  var spk=spanKey(rec.css, rec.span);
   if(online&&db){
-    // 1) gryp die spannaam (uniek)
+    // 1) gryp die spannaam (uniek per afdeling)
     db.ref('spanne/'+spk).transaction(cur=>cur?undefined:rec.land).then(rS=>{
-      if(!rS.committed){ mWarn.textContent='Spannaam "'+rec.span+'" is reeds gebruik. Kies \u2019n unieke naam.'; mConfirm.disabled=false; return; }
+      if(!rS.committed){ mWarn.textContent='Spannaam "'+rec.span+'" is reeds in hierdie afdeling gebruik. Kies \u2019n unieke naam.'; mConfirm.disabled=false; return; }
       // 2) gryp die gleuf
       db.ref('slots/'+sk).transaction(cur=>cur?undefined:rec.land).then(r1=>{
         if(!r1.committed){ db.ref('spanne/'+spk).remove(); mWarn.textContent='Daardie gleuf is nou net geneem. Kies asb. ’n ander.'; mConfirm.disabled=false; return; }
